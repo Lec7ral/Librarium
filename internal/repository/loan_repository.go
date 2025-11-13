@@ -1,3 +1,5 @@
+// Package repository provides a data abstraction layer.
+// This file contains the implementation for loan data operations.
 package repository
 
 import (
@@ -19,7 +21,7 @@ type LoanRepository interface {
 	CreateLoan(bookID, userID int64) error
 	ReturnLoan(loanID int64) error
 	GetActiveLoansByUserID(userID int64) ([]models.Loan, error)
-	SearchLoans(filter LoanFilter) ([]models.Loan, error) // New method
+	SearchLoans(filter LoanFilter) ([]models.Loan, error)
 }
 
 // sqliteLoanRepository is the concrete implementation for SQLite.
@@ -32,7 +34,6 @@ func NewSQLiteLoanRepository(db *sql.DB) LoanRepository {
 	return &sqliteLoanRepository{DB: db}
 }
 
-// ... (CreateLoan and ReturnLoan methods remain the same)
 func (r *sqliteLoanRepository) CreateLoan(bookID, userID int64) error {
 	tx, err := r.DB.BeginTx(context.Background(), nil)
 	if err != nil {
@@ -101,7 +102,6 @@ func (r *sqliteLoanRepository) ReturnLoan(loanID int64) error {
 	return tx.Commit()
 }
 
-// GetActiveLoansByUserID remains the same.
 func (r *sqliteLoanRepository) GetActiveLoansByUserID(userID int64) ([]models.Loan, error) {
 	q := `
 		SELECT l.id, l.loan_date, l.book_id, b.title, b.isbn 
@@ -171,6 +171,7 @@ func (r *sqliteLoanRepository) SearchLoans(filter LoanFilter) ([]models.Loan, er
 			return nil, err
 		}
 
+		// Correctly handle the nullable return date.
 		if returnDate.Valid {
 			loan.ReturnDate = &returnDate.Time
 		}
