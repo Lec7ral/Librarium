@@ -1,0 +1,689 @@
+basePath: /
+definitions:
+  handlers.Credentials:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.LoanRequest:
+    properties:
+      book_id:
+        type: integer
+    required:
+    - book_id
+    type: object
+  handlers.PaginatedBooksResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Book'
+        type: array
+      metadata:
+        additionalProperties: true
+        type: object
+    type: object
+  models.Author:
+    properties:
+      bio:
+        type: string
+      id:
+        type: integer
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  models.Book:
+    properties:
+      author:
+        allOf:
+        - $ref: '#/definitions/models.Author'
+        description: |-
+          Author is a pointer to the Author model for nesting author information in responses.
+          The `omitempty` tag prevents it from being included in the JSON if it's nil.
+      author_id:
+        description: |-
+          AuthorID is used for data input when creating/updating a book.
+          It links the book to an author in the authors table.
+        type: integer
+      id:
+        description: ID is the unique identifier for the book.
+        type: integer
+      isbn:
+        description: ISBN is the International Standard Book Number.
+        type: string
+      published_date:
+        description: PublishedDate is the date the book was published, in YYYY-MM-DD
+          format.
+        type: string
+      stock:
+        description: Stock is the number of available copies of the book.
+        minimum: 0
+        type: integer
+      title:
+        description: Title is the title of the book.
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - author_id
+    - isbn
+    - published_date
+    - title
+    type: object
+  models.Loan:
+    properties:
+      book:
+        $ref: '#/definitions/models.Book'
+      book_id:
+        type: integer
+      id:
+        type: integer
+      loan_date:
+        type: string
+      return_date:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      user_id:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      id:
+        description: ID is the unique identifier for the user.
+        type: integer
+      role:
+        type: string
+      username:
+        description: Username is the unique name for the user account.
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - username
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the API for the Librarium application, a digital library management
+    system.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Librarium API
+  version: "1.0"
+paths:
+  /authors:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all authors.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Author'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List authors
+      tags:
+      - Authors
+    post:
+      consumes:
+      - application/json
+      description: Adds a new author to the collection. Requires librarian role.
+      parameters:
+      - description: Author object to be created
+        in: body
+        name: author
+        required: true
+        schema:
+          $ref: '#/definitions/models.Author'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Author'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new author
+      tags:
+      - Authors
+  /authors/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the details of a single author by their unique ID.
+      parameters:
+      - description: Author ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Author'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get an author by ID
+      tags:
+      - Authors
+  /books:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated, filtered, and sorted list of books.
+      parameters:
+      - description: Filter by book title (case-insensitive, partial match)
+        in: query
+        name: title
+        type: string
+      - description: Filter by author name (case-insensitive, partial match)
+        in: query
+        name: author
+        type: string
+      - description: 'Field to sort by. Allowed values: title, author, published_date,
+          stock'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort order. Allowed values: asc, desc'
+        in: query
+        name: order
+        type: string
+      - description: Page number for pagination
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PaginatedBooksResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List books
+      tags:
+      - Books
+    post:
+      consumes:
+      - application/json
+      description: Adds a new book to the collection. Requires librarian role.
+      parameters:
+      - description: 'Book object to be created. Note: ''id'' and ''author'' fields
+          are ignored.'
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/models.Book'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Book'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new book
+      tags:
+      - Books
+  /books/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a book from the collection. Requires librarian role.
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a book
+      tags:
+      - Books
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the details of a single book by its unique ID.
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Book'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a book by ID
+      tags:
+      - Books
+    put:
+      consumes:
+      - application/json
+      description: Updates the details of an existing book. Requires librarian role.
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Book object with updated details
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/models.Book'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Book'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a book
+      tags:
+      - Books
+  /loans:
+    post:
+      consumes:
+      - application/json
+      description: Creates a loan record for the authenticated user and decrements
+        the book's stock.
+      parameters:
+      - description: Loan Request
+        in: body
+        name: loanRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Loan a book
+      tags:
+      - Loans
+  /loans/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Marks a loan as returned and increments the book's stock.
+      parameters:
+      - description: Loan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Return a book
+      tags:
+      - Loans
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token.
+      parameters:
+      - description: User Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login a user
+      tags:
+      - Authentication
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with the 'member' role.
+      parameters:
+      - description: User Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.Credentials'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /users/me/loans:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of books currently loaned by the authenticated
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Loan'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get my active loans
+      tags:
+      - Loans
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and a JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
