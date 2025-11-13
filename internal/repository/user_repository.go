@@ -28,13 +28,16 @@ func NewSQLiteUserRepository(db *sql.DB) UserRepository {
 
 // Create inserts a new user into the database.
 func (r *sqliteUserRepository) Create(user models.User, passwordHash string) error {
-	stmt, err := r.DB.Prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)")
+	// Be explicit about the role, even if the DB has a default.
+	if user.Role == "" {
+		user.Role = "member"
+	}
+	stmt, err := r.DB.Prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Username, passwordHash)
+	_, err = stmt.Exec(user.Username, passwordHash, user.Role)
 	if err != nil {
-		// Check for a unique constraint violation and return the shared error.
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return ErrUsernameExists
 		}
@@ -43,13 +46,14 @@ func (r *sqliteUserRepository) Create(user models.User, passwordHash string) err
 	return nil
 }
 
-// GetByUsername finds a user by their username.
+// GetByUsername finds a user by their username and includes their role.
 func (r *sqliteUserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
-	query := "SELECT id, username, password_hash FROM users WHERE username = ?"
-	err := r.DB.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.PasswordHash)
+	// Updated query to select the 'role' column.
+	query := "SELECT id, username, password_hash, role FROM users WHERE username = ?"
+	// Updated scan to include the 'role' field.
+	err := r.DB.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role)
 	if err != nil {
-		// Use errors.Is to check for sql.ErrNoRows and return the shared ErrNotFound.
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}

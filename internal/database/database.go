@@ -39,7 +39,8 @@ func InitDB(dsn string) (*sql.DB, error) {
 		CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT UNIQUE NOT NULL,
-			password_hash TEXT NOT NULL
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'member'
 		)
 	`)
 	if err != nil {
@@ -74,6 +75,24 @@ func InitDB(dsn string) (*sql.DB, error) {
 		return nil, err
 	}
 	_, err = booksTableStmt.Exec()
+	if err != nil {
+		return nil, err
+	}
+
+	loansTableStmt, err := db.Prepare(`
+CREATE TABLE IF NOT EXISTS loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    loan_date TEXT NOT NULL,
+    return_date TEXT,
+    FOREIGN KEY (book_id) REFERENCES books(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`)
+	if err != nil {
+		return nil, err
+	}
+	_, err = loansTableStmt.Exec()
 	if err != nil {
 		return nil, err
 	}

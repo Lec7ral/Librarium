@@ -8,6 +8,7 @@ type User struct {
 	ID int64 `json:"id"`
 	// Username is the unique name for the user account.
 	Username string `json:"username" validate:"required,min=3,max=50"`
+	Role     string `json:"role"`
 	// PasswordHash is the hashed version of the user's password.
 	// The json:"-" tag ensures this field is never exposed in API responses.
 	PasswordHash string `json:"-"`

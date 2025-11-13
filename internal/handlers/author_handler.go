@@ -11,11 +11,23 @@ import (
 
 	"github.com/Lec7ral/fullAPI/internal/models"
 	"github.com/Lec7ral/fullAPI/internal/repository"
-	"github.com/Lec7ral/fullAPI/internal/web" // <-- Import the new web package
+	"github.com/Lec7ral/fullAPI/internal/web"
 	"github.com/gorilla/mux"
 )
 
-// CreateAuthorHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Create a new author
+// @Description  Adds a new author to the collection. Requires librarian role.
+// @Tags         Authors
+// @Accept       json
+// @Produce      json
+// @Param        author  body      models.Author  true  "Author object to be created"
+// @Success      201     {object}  models.Author
+// @Failure      400     {object}  map[string]string
+// @Failure      401     {object}  map[string]string
+// @Failure      403     {object}  map[string]string
+// @Failure      500     {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /authors [post]
 func (e *Env) CreateAuthorHandler(w http.ResponseWriter, r *http.Request) {
 	var newAuthor models.Author
 	if err := json.NewDecoder(r.Body).Decode(&newAuthor); err != nil {
@@ -46,7 +58,14 @@ func (e *Env) CreateAuthorHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusCreated, createdAuthor)
 }
 
-// GetAuthorsHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      List authors
+// @Description  Get a list of all authors.
+// @Tags         Authors
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}   models.Author
+// @Failure      500  {object}  map[string]string
+// @Router       /authors [get]
 func (e *Env) GetAuthorsHandler(w http.ResponseWriter, r *http.Request) {
 	authors, err := e.AuthorRepo.GetAll()
 	if err != nil {
@@ -62,7 +81,16 @@ func (e *Env) GetAuthorsHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusOK, authors)
 }
 
-// GetAuthorHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Get an author by ID
+// @Description  Retrieves the details of a single author by their unique ID.
+// @Tags         Authors
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Author ID"
+// @Success      200  {object}  models.Author
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /authors/{id} [get]
 func (e *Env) GetAuthorHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)

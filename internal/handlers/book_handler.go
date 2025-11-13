@@ -12,7 +12,7 @@ import (
 
 	"github.com/Lec7ral/fullAPI/internal/models"
 	"github.com/Lec7ral/fullAPI/internal/repository"
-	"github.com/Lec7ral/fullAPI/internal/web" // <-- Import the new web package
+	"github.com/Lec7ral/fullAPI/internal/web"
 	"github.com/gorilla/mux"
 )
 
@@ -21,6 +21,7 @@ type Env struct {
 	BookRepo   repository.BookRepository
 	UserRepo   repository.UserRepository
 	AuthorRepo repository.AuthorRepository
+	LoanRepo   repository.LoanRepository
 	JWTSecret  string
 }
 
@@ -30,9 +31,21 @@ type PaginatedBooksResponse struct {
 	Data     []models.Book          `json:"data"`
 }
 
-// GetBooksHandler handles fetching books with pagination, filtering, and sorting.
+// @Summary      List books
+// @Description  Get a paginated, filtered, and sorted list of books.
+// @Tags         Books
+// @Accept       json
+// @Produce      json
+// @Param        title    query     string  false  "Filter by book title (case-insensitive, partial match)"
+// @Param        author   query     string  false  "Filter by author name (case-insensitive, partial match)"
+// @Param        sort     query     string  false  "Field to sort by. Allowed values: title, author, published_date, stock"
+// @Param        order    query     string  false  "Sort order. Allowed values: asc, desc"
+// @Param        page     query     int     false  "Page number for pagination"
+// @Param        limit    query     int     false  "Number of items per page"
+// @Success      200      {object}  PaginatedBooksResponse
+// @Failure      500      {object}  map[string]string
+// @Router       /books [get]
 func (e *Env) GetBooksHandler(w http.ResponseWriter, r *http.Request) {
-	// ... (Pagination, Filtering, Sorting logic remains the same)
 	limitStr := r.URL.Query().Get("limit")
 	pageStr := r.URL.Query().Get("page")
 	limit, err := strconv.Atoi(limitStr)
@@ -80,7 +93,19 @@ func (e *Env) GetBooksHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusOK, response)
 }
 
-// CreateBookHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Create a new book
+// @Description  Adds a new book to the collection. Requires librarian role.
+// @Tags         Books
+// @Accept       json
+// @Produce      json
+// @Param        book  body      models.Book  true  "Book object to be created. Note: 'id' and 'author' fields are ignored."
+// @Success      201   {object}  models.Book
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /books [post]
 func (e *Env) CreateBookHandler(w http.ResponseWriter, r *http.Request) {
 	var newBook models.Book
 	if err := json.NewDecoder(r.Body).Decode(&newBook); err != nil {
@@ -122,7 +147,16 @@ func (e *Env) CreateBookHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusCreated, createdBook)
 }
 
-// GetBookHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Get a book by ID
+// @Description  Retrieves the details of a single book by its unique ID.
+// @Tags         Books
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Book ID"
+// @Success      200  {object}  models.Book
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /books/{id} [get]
 func (e *Env) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
@@ -141,7 +175,21 @@ func (e *Env) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusOK, book)
 }
 
-// UpdateBookHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Update a book
+// @Description  Updates the details of an existing book. Requires librarian role.
+// @Tags         Books
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int          true  "Book ID"
+// @Param        book  body      models.Book  true  "Book object with updated details"
+// @Success      200   {object}  models.Book
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      403   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /books/{id} [put]
 func (e *Env) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
@@ -190,7 +238,19 @@ func (e *Env) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusOK, finalBook)
 }
 
-// DeleteBookHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Delete a book
+// @Description  Deletes a book from the collection. Requires librarian role.
+// @Tags         Books
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Book ID"
+// @Success      204  {string}  string "No Content"
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /books/{id} [delete]
 func (e *Env) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)

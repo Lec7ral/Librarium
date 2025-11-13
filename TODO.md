@@ -52,18 +52,18 @@ Este documento traza el progreso y los futuros pasos para el desarrollo de la AP
 
 ## 🚀 Fase 4: Próximos Pasos hacia un Producto Completo
 
-- [ ] **Gestión de Inventario y Préstamos (Lógica de Negocio Compleja):**
-    - [ ] Añadir un campo `stock` a la tabla `books`.
-    - [ ] Crear una nueva tabla `loans` (préstamos) que relacione un `user_id` con un `book_id`, con fechas de préstamo y devolución.
-    - [ ] Implementar endpoints para que un usuario pueda "tomar prestado" un libro (crear un `loan` y decrementar el `stock`) y "devolverlo" (eliminar el `loan` y aumentar el `stock`).
+- [x] **Gestión de Inventario y Préstamos (Lógica de Negocio Compleja):**
+    - [x] Añadir un campo `stock` a la tabla `books`.
+    - [x] Crear una nueva tabla `loans` (préstamos) que relacione un `user_id` con un `book_id`, con fechas de préstamo y devolución.
+    - [x] Implementar endpoints para que un usuario pueda "tomar prestado" un libro (crear un `loan` y decrementar el `stock`) y "devolverlo" (eliminar el `loan` y aumentar el `stock`).
 
-- [ ] **Roles y Permisos (Autorización Avanzada):**
-    - [ ] Añadir un campo `role` a la tabla `users` (p. ej., "miembro" y "bibliotecario").
-    - [ ] Modificar la emisión de tokens JWT para que incluyan el rol del usuario.
-    - [ ] Crear un nuevo middleware de autorización que restrinja ciertas acciones (como crear autores o añadir stock) solo a los usuarios con el rol de "bibliotecario".
+- [x] **Roles y Permisos (Autorización Avanzada):**
+    - [x] Añadir un campo `role` a la tabla `users` (p. ej., "miembro" y "bibliotecario").
+    - [x] Modificar la emisión de tokens JWT para que incluyan el rol del usuario.
+    - [x] Crear un nuevo middleware de autorización que restrinja ciertas acciones (como crear autores o añadir stock) solo a los usuarios con el rol de "bibliotecario".
 
-- [ ] **Mejora de la Experiencia del Desarrollador (DX):**
-    - [ ] **Documentación de la API con Swagger/OpenAPI:** Generar documentación interactiva de la API a partir del código para que otros desarrolladores puedan descubrir y probar los endpoints fácilmente.
+- [x] **Mejora de la Experiencia del Desarrollador (DX):**
+    - [x] **Documentación de la API con Swagger/OpenAPI:** Generar documentación interactiva de la API a partir del código para que otros desarrolladores puedan descubrir y probar los endpoints fácilmente.
 
 - [ ] **Optimización y Rendimiento:**
     - [ ] **Resolver el Problema N+1:** Analizar las consultas y optimizar la obtención de datos relacionados para evitar múltiples viajes a la base de datos.

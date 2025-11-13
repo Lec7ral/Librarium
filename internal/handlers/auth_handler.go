@@ -11,7 +11,7 @@ import (
 
 	"github.com/Lec7ral/fullAPI/internal/models"
 	"github.com/Lec7ral/fullAPI/internal/repository"
-	"github.com/Lec7ral/fullAPI/internal/web" // <-- Import the new web package
+	"github.com/Lec7ral/fullAPI/internal/web"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,7 +22,17 @@ type Credentials struct {
 	Password string `json:"password" validate:"required"`
 }
 
-// RegisterUserHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Register a new user
+// @Description  Creates a new user account with the 'member' role.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      Credentials  true  "User Credentials"
+// @Success      201          {string}  string "Created"
+// @Failure      400          {object}  map[string]string
+// @Failure      409          {object}  map[string]string
+// @Failure      500          {object}  map[string]string
+// @Router       /register [post]
 func (e *Env) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
@@ -58,7 +68,17 @@ func (e *Env) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	web.RespondWithJSON(w, http.StatusCreated, nil)
 }
 
-// LoginUserHandler now uses the standardized JSON response helpers from the web package.
+// @Summary      Login a user
+// @Description  Authenticates a user and returns a JWT token.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      Credentials      true  "User Credentials"
+// @Success      200          {object}  map[string]string
+// @Failure      400          {object}  map[string]string
+// @Failure      401          {object}  map[string]string
+// @Failure      500          {object}  map[string]string
+// @Router       /login [post]
 func (e *Env) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
@@ -82,10 +102,19 @@ func (e *Env) LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create custom claims to include the user's role.
+	type AppClaims struct {
+		Role string `json:"role"`
+		jwt.RegisteredClaims
+	}
+
 	expirationTime := time.Now().Add(24 * time.Hour)
-	claims := &jwt.RegisteredClaims{
-		Subject:   user.Username,
-		ExpiresAt: jwt.NewNumericDate(expirationTime),
+	claims := &AppClaims{
+		Role: user.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   user.Username,
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

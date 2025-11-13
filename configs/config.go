@@ -16,6 +16,11 @@ type Config struct {
 		// DSN is the Data Source Name for the database connection.
 		DSN string
 	}
+	Redis struct {
+		Addr     string
+		Password string
+		DB       int
+	}
 	// JWTSecret is the secret key for signing JWT tokens.
 	JWTSecret string
 }
@@ -30,6 +35,11 @@ func LoadConfig() *Config {
 	if cfg.ServerPort == "" {
 		cfg.ServerPort = ":8080"
 	}
+	cfg.Redis.Addr = os.Getenv("REDIS_ADDR")
+	if cfg.Redis.Addr == "" {
+		cfg.Redis.Addr = ":6379"
+	}
+	cfg.Redis.Password = os.Getenv("REDIS_PASSWORD")
 
 	// Load database DSN from environment or use default.
 	cfg.Database.DSN = os.Getenv("DB_DSN")
