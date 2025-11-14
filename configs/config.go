@@ -35,15 +35,19 @@ func LoadConfig() *Config {
 	}
 
 	// --- Public Host & Scheme (External) ---
-	// This is what users (and Swagger) will see.
-	cfg.PublicHost = os.Getenv("PUBLIC_HOST")
-	if cfg.PublicHost == "" {
-		// Default for local development
-		cfg.PublicHost = "localhost" + cfg.ServerPort
-	}
-	cfg.PublicScheme = os.Getenv("PUBLIC_SCHEME")
-	if cfg.PublicScheme == "" {
-		// Default for local development
+	// Check if we are running in the production environment (Domcloud/Passenger).
+	if os.Getenv("IN_PASSENGER") == "1" {
+		// If so, hardcode the known public URL. This is a pragmatic solution
+		// when the environment cannot be configured with custom variables.
+		cfg.PublicHost = "librarium.mnz.dom.my.id"
+		cfg.PublicScheme = "https"
+	} else {
+		// Otherwise, default to local development settings.
+		port := cfg.ServerPort
+		if strings.HasPrefix(port, ":") {
+			port = port[1:]
+		}
+		cfg.PublicHost = "localhost:" + port
 		cfg.PublicScheme = "http"
 	}
 

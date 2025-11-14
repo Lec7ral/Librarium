@@ -11,28 +11,35 @@ import (
 	"time"
 
 	"github.com/Lec7ral/fullAPI/configs"
-	"github.com/Lec7ral/fullAPI/docs" // Import generated docs
+	"github.com/Lec7ral/fullAPI/docs"
 	"github.com/Lec7ral/fullAPI/internal/database"
 	"github.com/Lec7ral/fullAPI/internal/handlers"
 	"github.com/Lec7ral/fullAPI/internal/middleware"
 	"github.com/Lec7ral/fullAPI/internal/repository"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv" // Import godotenv
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+func init() {
+	// The init function runs before main.
+	// We load the .env file here. godotenv.Load() will NOT override existing environment variables.
+	// This means that variables set by the hosting provider will always take precedence.
+	// It will only load variables from .env if they are not already set in the environment.
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using OS environment variables.")
+	}
+}
+
 // @title           Librarium API
-// @version         1.0
-// @description     This is the API for the Librarium application.
-// @BasePath        /
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
+// ... (resto de las anotaciones)
 func main() {
+	// By the time main starts, environment variables from .env (if present) are already loaded.
+
 	// --- 1. SETUP ---
 	cfg := configs.LoadConfig()
 
 	// --- Dynamic Swagger Configuration ---
-	// Set swagger info dynamically based on the explicit public configuration.
 	docs.SwaggerInfo.Title = "Librarium API"
 	docs.SwaggerInfo.Description = "This is the API for the Librarium application."
 	docs.SwaggerInfo.Version = "1.0"
@@ -40,7 +47,7 @@ func main() {
 	docs.SwaggerInfo.BasePath = "/"
 	docs.SwaggerInfo.Schemes = []string{cfg.PublicScheme}
 
-	// ... (DB, Repos, Env setup remains the same)
+	// ... (resto de main.go no cambia)
 	db, err := database.InitDB(cfg.Database.DSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -57,8 +64,6 @@ func main() {
 		LoanRepo:   loanRepo,
 		JWTSecret:  cfg.JWTSecret,
 	}
-
-	// --- 2. ROUTING ---
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 	authMw := middleware.AuthMiddleware(userRepo, cfg.JWTSecret)
@@ -78,8 +83,6 @@ func main() {
 	router.Handle("/loans/{id}", authMw(http.HandlerFunc(env.ReturnLoanHandler))).Methods(http.MethodDelete)
 	router.Handle("/users/me/loans", authMw(http.HandlerFunc(env.GetMyLoansHandler))).Methods(http.MethodGet)
 	router.Handle("/loans", authMw(adminMw(http.HandlerFunc(env.GetAllLoansHandler)))).Methods(http.MethodGet)
-
-	// --- 3. GRACEFUL SHUTDOWN ---
 	srv := &http.Server{
 		Addr:    cfg.ServerPort,
 		Handler: router,

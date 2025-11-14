@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   handlers.Credentials:
     properties:
@@ -108,9 +107,7 @@ definitions:
     type: object
 info:
   contact: {}
-  description: This is the API for the Librarium application.
   title: Librarium API
-  version: "1.0"
 paths:
   /authors:
     get:
@@ -571,9 +568,4 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
-securityDefinitions:
-  BearerAuth:
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

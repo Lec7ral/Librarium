@@ -1,12 +1,9 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is the API for the Librarium application.",
         "title": "Librarium API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
-    "basePath": "/",
     "paths": {
         "/authors": {
             "get": {
@@ -854,13 +851,6 @@
                     "minLength": 3
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }
