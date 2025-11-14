@@ -1,9 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
+        "description": "This is the API for the Librarium application.",
         "title": "Librarium API",
-        "contact": {}
+        "contact": {},
+        "version": "1.0"
     },
+    "host": "localhost:8080",
+    "basePath": "/",
     "paths": {
         "/authors": {
             "get": {
@@ -851,6 +855,14 @@
                     "minLength": 3
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and a JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

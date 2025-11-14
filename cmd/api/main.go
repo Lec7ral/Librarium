@@ -11,48 +11,48 @@ import (
 	"time"
 
 	"github.com/Lec7ral/fullAPI/configs"
-	"github.com/Lec7ral/fullAPI/docs"
+	"github.com/Lec7ral/fullAPI/docs" // Import generated docs
 	"github.com/Lec7ral/fullAPI/internal/database"
 	"github.com/Lec7ral/fullAPI/internal/handlers"
 	"github.com/Lec7ral/fullAPI/internal/middleware"
 	"github.com/Lec7ral/fullAPI/internal/repository"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv" // Import godotenv
+	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func init() {
-	// The init function runs before main.
-	// We load the .env file here. godotenv.Load() will NOT override existing environment variables.
-	// This means that variables set by the hosting provider will always take precedence.
-	// It will only load variables from .env if they are not already set in the environment.
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using OS environment variables.")
 	}
 }
 
 // @title           Librarium API
-// ... (resto de las anotaciones)
+// @version         1.0
+// @description     This is the API for the Librarium application.
+// @host            localhost:8080
+// @BasePath        /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and a JWT token.
 func main() {
-	// By the time main starts, environment variables from .env (if present) are already loaded.
-
 	// --- 1. SETUP ---
 	cfg := configs.LoadConfig()
 
 	// --- Dynamic Swagger Configuration ---
-	docs.SwaggerInfo.Title = "Librarium API"
-	docs.SwaggerInfo.Description = "This is the API for the Librarium application."
-	docs.SwaggerInfo.Version = "1.0"
+	// The generated docs.SwaggerInfo holds all the static information from the annotations.
+	// We only override the fields that need to be dynamic based on the environment.
 	docs.SwaggerInfo.Host = cfg.PublicHost
-	docs.SwaggerInfo.BasePath = "/"
 	docs.SwaggerInfo.Schemes = []string{cfg.PublicScheme}
 
-	// ... (resto de main.go no cambia)
 	db, err := database.InitDB(cfg.Database.DSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
+
+	// ... (Repository and Env setup remains the same)
 	bookRepo := repository.NewSQLiteBookRepository(db)
 	userRepo := repository.NewSQLiteUserRepository(db)
 	authorRepo := repository.NewSQLiteAuthorRepository(db)
@@ -64,11 +64,17 @@ func main() {
 		LoanRepo:   loanRepo,
 		JWTSecret:  cfg.JWTSecret,
 	}
+
+	// --- 2. ROUTING ---
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
+
 	authMw := middleware.AuthMiddleware(userRepo, cfg.JWTSecret)
 	adminMw := middleware.RoleRequiredMiddleware("librarian")
+
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
+	// ... (All route definitions remain the same)
 	router.HandleFunc("/register", env.RegisterUserHandler).Methods(http.MethodPost)
 	router.HandleFunc("/login", env.LoginUserHandler).Methods(http.MethodPost)
 	router.HandleFunc("/authors", env.GetAuthorsHandler).Methods(http.MethodGet)
@@ -83,6 +89,8 @@ func main() {
 	router.Handle("/loans/{id}", authMw(http.HandlerFunc(env.ReturnLoanHandler))).Methods(http.MethodDelete)
 	router.Handle("/users/me/loans", authMw(http.HandlerFunc(env.GetMyLoansHandler))).Methods(http.MethodGet)
 	router.Handle("/loans", authMw(adminMw(http.HandlerFunc(env.GetAllLoansHandler)))).Methods(http.MethodGet)
+
+	// --- 3. GRACEFUL SHUTDOWN ---
 	srv := &http.Server{
 		Addr:    cfg.ServerPort,
 		Handler: router,

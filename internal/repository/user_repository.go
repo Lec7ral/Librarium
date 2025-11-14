@@ -14,6 +14,7 @@ import (
 type UserRepository interface {
 	Create(user models.User, passwordHash string) error
 	GetByUsername(username string) (*models.User, error)
+	UpdateUserRole(username, role string) error // New method
 }
 
 // sqliteUserRepository is the concrete implementation for SQLite.
@@ -28,7 +29,6 @@ func NewSQLiteUserRepository(db *sql.DB) UserRepository {
 
 // Create inserts a new user into the database.
 func (r *sqliteUserRepository) Create(user models.User, passwordHash string) error {
-	// Be explicit about the role, even if the DB has a default.
 	if user.Role == "" {
 		user.Role = "member"
 	}
@@ -49,9 +49,7 @@ func (r *sqliteUserRepository) Create(user models.User, passwordHash string) err
 // GetByUsername finds a user by their username and includes their role.
 func (r *sqliteUserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
-	// Updated query to select the 'role' column.
 	query := "SELECT id, username, password_hash, role FROM users WHERE username = ?"
-	// Updated scan to include the 'role' field.
 	err := r.DB.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -60,4 +58,25 @@ func (r *sqliteUserRepository) GetByUsername(username string) (*models.User, err
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdateUserRole updates the role of a specific user.
+func (r *sqliteUserRepository) UpdateUserRole(username, role string) error {
+	stmt, err := r.DB.Prepare("UPDATE users SET role = ? WHERE username = ?")
+	if err != nil {
+		return err
+	}
+	result, err := stmt.Exec(role, username)
+	if err != nil {
+		return err
+	}
+	// Check if any row was affected. If not, the user was not found.
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound // Reuse our "not found" error.
+	}
+	return nil
 }
