@@ -34,7 +34,12 @@ func LoadConfig() *Config {
 	}
 
 	// --- App Host Configuration ---
-	cfg.AppHost = os.Getenv("APP_HOST")
+	// Prioritize HOSTNAME, which is provided by the production environment (Domcloud).
+	cfg.AppHost = os.Getenv("HOSTNAME")
+	if cfg.AppHost == "" {
+		// Fallback to APP_HOST for other environments.
+		cfg.AppHost = os.Getenv("APP_HOST")
+	}
 	if cfg.AppHost == "" {
 		// Default to localhost with the configured port for local development.
 		port := cfg.ServerPort
