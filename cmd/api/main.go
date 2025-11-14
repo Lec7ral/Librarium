@@ -22,44 +22,34 @@ import (
 
 // @title           Librarium API
 // @version         1.0
-// @description     This is the API for the Librarium application, a digital library management system.
-// @termsOfService  http://swagger.io/terms/
-// @contact.name    API Support
-// @contact.url     http://www.swagger.io/support
-// @contact.email   support@swagger.io
-// @license.name    Apache 2.0
-// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
+// @description     This is the API for the Librarium application.
 // @BasePath        /
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and a JWT token.
 func main() {
 	// --- 1. SETUP ---
 	cfg := configs.LoadConfig()
 
 	// --- Dynamic Swagger Configuration ---
-	// Set swagger info dynamically based on the loaded configuration.
+	// Set swagger info dynamically based on the explicit public configuration.
 	docs.SwaggerInfo.Title = "Librarium API"
 	docs.SwaggerInfo.Description = "This is the API for the Librarium application."
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = cfg.AppHost
+	docs.SwaggerInfo.Host = cfg.PublicHost
 	docs.SwaggerInfo.BasePath = "/"
-	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+	docs.SwaggerInfo.Schemes = []string{cfg.PublicScheme}
 
+	// ... (DB, Repos, Env setup remains the same)
 	db, err := database.InitDB(cfg.Database.DSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
-
-	// Create instances of our repositories.
 	bookRepo := repository.NewSQLiteBookRepository(db)
 	userRepo := repository.NewSQLiteUserRepository(db)
 	authorRepo := repository.NewSQLiteAuthorRepository(db)
 	loanRepo := repository.NewSQLiteLoanRepository(db)
-
-	// Create the environment struct for handlers, injecting dependencies.
 	env := &handlers.Env{
 		BookRepo:   bookRepo,
 		UserRepo:   userRepo,
@@ -71,30 +61,19 @@ func main() {
 	// --- 2. ROUTING ---
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
-
 	authMw := middleware.AuthMiddleware(userRepo, cfg.JWTSecret)
 	adminMw := middleware.RoleRequiredMiddleware("librarian")
-
-	// --- Swagger Route ---
 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
-
-	// --- User & Authentication Routes (Public) ---
 	router.HandleFunc("/register", env.RegisterUserHandler).Methods(http.MethodPost)
 	router.HandleFunc("/login", env.LoginUserHandler).Methods(http.MethodPost)
-
-	// --- Author Routes ---
 	router.HandleFunc("/authors", env.GetAuthorsHandler).Methods(http.MethodGet)
 	router.HandleFunc("/authors/{id}", env.GetAuthorHandler).Methods(http.MethodGet)
 	router.Handle("/authors", authMw(adminMw(http.HandlerFunc(env.CreateAuthorHandler)))).Methods(http.MethodPost)
-
-	// --- Book Routes ---
 	router.HandleFunc("/books", env.GetBooksHandler).Methods(http.MethodGet)
 	router.HandleFunc("/books/{id}", env.GetBookHandler).Methods(http.MethodGet)
 	router.Handle("/books", authMw(adminMw(http.HandlerFunc(env.CreateBookHandler)))).Methods(http.MethodPost)
 	router.Handle("/books/{id}", authMw(adminMw(http.HandlerFunc(env.UpdateBookHandler)))).Methods(http.MethodPut)
 	router.Handle("/books/{id}", authMw(adminMw(http.HandlerFunc(env.DeleteBookHandler)))).Methods(http.MethodDelete)
-
-	// --- Loan Routes ---
 	router.Handle("/loans", authMw(http.HandlerFunc(env.CreateLoanHandler))).Methods(http.MethodPost)
 	router.Handle("/loans/{id}", authMw(http.HandlerFunc(env.ReturnLoanHandler))).Methods(http.MethodDelete)
 	router.Handle("/users/me/loans", authMw(http.HandlerFunc(env.GetMyLoansHandler))).Methods(http.MethodGet)
@@ -105,25 +84,20 @@ func main() {
 		Addr:    cfg.ServerPort,
 		Handler: router,
 	}
-
 	go func() {
 		log.Printf("Starting server on port %s\n", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Could not start server: %s\n", err)
 		}
 	}()
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutting down server...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
-
 	log.Println("Server exiting.")
 }
