@@ -4,11 +4,13 @@ package configs
 import (
 	"log"
 	"os"
+	"strings"
 )
 
 // Config holds all configuration for the application.
 type Config struct {
 	ServerPort string
+	AppHost    string // Hostname for the application (e.g., localhost:8080 or my-app.com)
 	Database   struct{ DSN string }
 	Redis      struct {
 		Addr     string
@@ -23,19 +25,27 @@ func LoadConfig() *Config {
 	var cfg Config
 
 	// --- Server Port Configuration ---
-	// Most cloud providers (like Heroku, Domcloud, Render) set the PORT environment variable.
-	// We will prioritize that variable for production compatibility.
 	cfg.ServerPort = os.Getenv("PORT")
 	if cfg.ServerPort == "" {
-		// For local development or other setups, we can use a custom SERVER_PORT.
 		cfg.ServerPort = os.Getenv("SERVER_PORT")
 	}
-	// If neither is set, use a default for local development.
 	if cfg.ServerPort == "" {
 		cfg.ServerPort = "8080"
 	}
-	// Ensure the port starts with a colon for the ListenAndServe function.
-	if cfg.ServerPort[0] != ':' {
+
+	// --- App Host Configuration ---
+	cfg.AppHost = os.Getenv("APP_HOST")
+	if cfg.AppHost == "" {
+		// Default to localhost with the configured port for local development.
+		port := cfg.ServerPort
+		if strings.HasPrefix(port, ":") {
+			port = port[1:]
+		}
+		cfg.AppHost = "localhost:" + port
+	}
+
+	// Ensure the ServerPort starts with a colon for ListenAndServe.
+	if !strings.HasPrefix(cfg.ServerPort, ":") {
 		cfg.ServerPort = ":" + cfg.ServerPort
 	}
 

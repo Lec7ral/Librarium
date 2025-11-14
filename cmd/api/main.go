@@ -11,13 +11,12 @@ import (
 	"time"
 
 	"github.com/Lec7ral/fullAPI/configs"
+	"github.com/Lec7ral/fullAPI/docs" // Import generated docs
 	"github.com/Lec7ral/fullAPI/internal/database"
 	"github.com/Lec7ral/fullAPI/internal/handlers"
 	"github.com/Lec7ral/fullAPI/internal/middleware"
 	"github.com/Lec7ral/fullAPI/internal/repository"
 	"github.com/gorilla/mux"
-
-	_ "github.com/Lec7ral/fullAPI/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -30,7 +29,6 @@ import (
 // @contact.email   support@swagger.io
 // @license.name    Apache 2.0
 // @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
-// @host            localhost:8080
 // @BasePath        /
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -39,17 +37,29 @@ import (
 func main() {
 	// --- 1. SETUP ---
 	cfg := configs.LoadConfig()
+
+	// --- Dynamic Swagger Configuration ---
+	// Set swagger info dynamically based on the loaded configuration.
+	docs.SwaggerInfo.Title = "Librarium API"
+	docs.SwaggerInfo.Description = "This is the API for the Librarium application."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = cfg.AppHost
+	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
 	db, err := database.InitDB(cfg.Database.DSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
+	// Create instances of our repositories.
 	bookRepo := repository.NewSQLiteBookRepository(db)
 	userRepo := repository.NewSQLiteUserRepository(db)
 	authorRepo := repository.NewSQLiteAuthorRepository(db)
 	loanRepo := repository.NewSQLiteLoanRepository(db)
 
+	// Create the environment struct for handlers, injecting dependencies.
 	env := &handlers.Env{
 		BookRepo:   bookRepo,
 		UserRepo:   userRepo,
@@ -85,11 +95,9 @@ func main() {
 	router.Handle("/books/{id}", authMw(adminMw(http.HandlerFunc(env.DeleteBookHandler)))).Methods(http.MethodDelete)
 
 	// --- Loan Routes ---
-	// Actions for authenticated users (members and librarians)
 	router.Handle("/loans", authMw(http.HandlerFunc(env.CreateLoanHandler))).Methods(http.MethodPost)
 	router.Handle("/loans/{id}", authMw(http.HandlerFunc(env.ReturnLoanHandler))).Methods(http.MethodDelete)
 	router.Handle("/users/me/loans", authMw(http.HandlerFunc(env.GetMyLoansHandler))).Methods(http.MethodGet)
-	// Admin-only action for viewing all loans
 	router.Handle("/loans", authMw(adminMw(http.HandlerFunc(env.GetAllLoansHandler)))).Methods(http.MethodGet)
 
 	// --- 3. GRACEFUL SHUTDOWN ---
